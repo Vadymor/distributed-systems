@@ -2,8 +2,11 @@ import json
 import requests
 from datetime import datetime
 import uvicorn
+import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
+
+lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
@@ -18,8 +21,8 @@ class Message(BaseModel):
 @app.get("/get-messages")
 def get_messages():
     """
-    Function for returning all messages in GET request
-    :return: list with all messages
+    This Function stands for returning of all messages in GET request
+    :return: returns the list with all messages
     """
     return messages
 
@@ -27,10 +30,10 @@ def get_messages():
 @app.post("/add-message/")
 def add_messages(message: Message, response: Response):
     """
-    Function for adding new messages in the list and replicating it in the secondaries
+    This Function stands for adding of new messages in the list and replicating it in the secondaries
     :param message: received message
     :param response: POST response
-    :return: text about results of request
+    :return: returns the text about results of request
     """
     messages.append(message.value)
 
@@ -38,10 +41,10 @@ def add_messages(message: Message, response: Response):
 
     if replication_status:
         response.status_code = status.HTTP_200_OK
-        return "Replication was successful"
+        lg.info("Replication was successful")
     else:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        return "Replication wasn't successful"
+        lg.warning("Replication wasn't successful")
 
 
 def replicate_on_secondaries(replicated_message: str) -> bool:
@@ -55,16 +58,21 @@ def replicate_on_secondaries(replicated_message: str) -> bool:
     }
 
     response1 = requests.post(url="http://127.0.0.1:8001/add-message-secondary/", data=json.dumps(payload))
-    print(f"Response status code from 1: {response1.status_code} at {datetime.now()}")
+    lg.info(f"Response status code from the Sec1 is: {response1.status_code} at {datetime.now()}")
 
     response2 = requests.post(url="http://127.0.0.1:8002/add-message-secondary/", data=json.dumps(payload))
-    print(f"Response status code from 2: {response2.status_code} at {datetime.now()}")
+    lg.info(f"Response status code from the Sec2 is: {response2.status_code} at {datetime.now()}")
 
     if response1.status_code == 200 and response2.status_code == 200:
         return True
     else:
         return False
 
-
 if __name__ == '__main__':
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    lg.info("The Master`s launch is starting")
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+  
+
+
+
+

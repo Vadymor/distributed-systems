@@ -1,7 +1,10 @@
 import uvicorn
+import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 from time import sleep
+
+lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
@@ -25,9 +28,11 @@ def add_messages(message: Message, response: Response):
     sleep(1)
 
     response.status_code = status.HTTP_200_OK
-    return "Message was added successfully"
+    lg.info("Message was added successfully")
 
 
 if __name__ == '__main__':
+    lg.info("The Secondary`s launch is starting")
     uvicorn.run(app, host="127.0.0.1", port=8001)
-    # uvicorn secondary:app --host 0.0.0.0 --port 8001
+    # uvicorn secondary:app --host 127.0.0.1 --port 8001
+
