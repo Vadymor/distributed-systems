@@ -8,24 +8,27 @@ lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
-messages = []
+messages = {}
 
 
 class Message(BaseModel):
     value: str
+    number: int
 
 
 @app.get("/get-messages-secondary/")
 def get_messages():
-    return messages
+    sorted_messages = sorted(messages.items())
+
+    return [i[1] for i in sorted_messages]
 
 
 @app.post("/add-message-secondary/")
 def add_messages(message: Message, response: Response):
-    messages.append(message.value)
+    messages[message.number] = message.value
 
     # delay emulation
-    sleep(5)
+    sleep(1)
 
     response.status_code = status.HTTP_200_OK
     lg.info("Message was added successfully")
@@ -34,4 +37,5 @@ def add_messages(message: Message, response: Response):
 if __name__ == '__main__':
     lg.info("The Secondary`s launch is starting")
     uvicorn.run(app, host="127.0.0.1", port=8002)
-    # uvicorn secondary:app --host 0.0.0.0 --port 8002
+    # uvicorn secondary:app --host 127.0.0.1 --port 8001
+
