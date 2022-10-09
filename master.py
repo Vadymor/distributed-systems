@@ -55,7 +55,7 @@ def add_messages(message: Message, response: Response):
 
 def replicate_on_secondaries(replicated_message: str, message_number: int) -> bool:
     """
-    Function for replicating the message on the secondaries
+    This Function stands for replicating of the message on the secondaries
     :param replicated_message: message for replication
     :param message_number: message number
     :return: replication status
@@ -75,6 +75,13 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
 
 
 def make_request(payload, port) -> bool:
+    """
+    This Function stands for the post request of the message from the Master to the Secondaries
+    :param payload: message that consists of value (message content) and number (message ID)
+    :param port: the port of secondary as param, to operate over several Secondaries
+    :return: boolean value, to confirm successfull post request to both of Secondaries
+    """
+
     try:
         response = requests.post(url=f"http://127.0.0.1:{port}/add-message-secondary/", data=json.dumps(payload))
         lg.info(f"Response status code from the Sec{port} is: {response.status_code} at {datetime.now()}")
@@ -83,7 +90,8 @@ def make_request(payload, port) -> bool:
         else:
             return False
     except Exception as err:
-        print(err)
+        lg.error(err)
+
         return False
 
 

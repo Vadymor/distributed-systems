@@ -18,6 +18,10 @@ class Message(BaseModel):
 
 @app.get("/get-messages-secondary/")
 def get_messages():
+    """
+    This Function stands for returning of all messages in GET request
+    :return: returns the list with all messages, already sorted
+    """
     sorted_messages = sorted(messages.items())
 
     return [i[1] for i in sorted_messages]
@@ -25,6 +29,13 @@ def get_messages():
 
 @app.post("/add-message-secondary/")
 def add_messages(message: Message, response: Response):
+    """
+    This Function stands for adding of new messages to the Secondaries from the Master
+    :param message: message from the Master
+    :param response: POST response
+    :return: returns the text about results of request
+    """
+
     messages[message.number] = message.value
 
     # delay emulation
