@@ -8,21 +8,34 @@ lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
-messages = []
+messages = {}
 
 
 class Message(BaseModel):
     value: str
+    number: int
 
 
 @app.get("/get-messages-secondary/")
 def get_messages():
-    return messages
+    """
+    This Function stands for returning of all messages in GET request
+    :return: returns the list with all messages, already sorted
+    """
+    sorted_messages = sorted(messages.items())
+
+    return [i[1] for i in sorted_messages]
 
 
 @app.post("/add-message-secondary/")
 def add_messages(message: Message, response: Response):
-    messages.append(message.value)
+    """
+    This Function stands for adding of new messages to the Secondaries from the Master
+    :param message: message from the Master
+    :param response: POST response
+    :return: returns the text about results of request
+    """
+    messages[message.number] = message.value
 
     # delay emulation
     sleep(1)
