@@ -65,8 +65,8 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         "number": message_number
     }
 
-    response1 = make_request(payload, 8001)
-    response2 = make_request(payload, 8002)
+    response1 = make_request(payload, 1, 8001)
+    response2 = make_request(payload, 2, 8002)
 
     if response1 and response2:
         return True
@@ -74,16 +74,17 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         return False
 
 
-def make_request(payload, port) -> bool:
+def make_request(payload, secondary_number, port) -> bool:
     """
     This Function stands for the post request of the message from the Master to the Secondaries
     :param payload: message that consists of value (message content) and number (message ID)
+    :param secondary_number: secondary service number
     :param port: the port of secondary as param, to operate over several Secondaries
     :return: boolean value, to confirm successfull post request to both of Secondaries
     """
 
     try:
-        response = requests.post(url=f"http://127.0.0.1:{port}/add-message-secondary/", data=json.dumps(payload))
+        response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/", data=json.dumps(payload))
         lg.info(f"Response status code from the Sec{port} is: {response.status_code} at {datetime.now()}")
         if response.status_code == 200:
             return True
@@ -97,4 +98,4 @@ def make_request(payload, port) -> bool:
 
 if __name__ == '__main__':
     lg.info("The Master`s launch is starting")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

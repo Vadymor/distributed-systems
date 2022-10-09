@@ -47,6 +47,6 @@ def add_messages(message: Message, response: Response):
 
 if __name__ == '__main__':
     lg.info("The Secondary`s launch is starting")
-    uvicorn.run(app, host="127.0.0.1", port=8001)
-    # uvicorn secondary:app --host 127.0.0.1 --port 8001
+    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # uvicorn secondary:app --host 0.0.0.0 --port 8001
 
