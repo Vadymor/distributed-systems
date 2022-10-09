@@ -81,6 +81,7 @@ def make_request(payload, port) -> bool:
     :param port: the port of secondary as param, to operate over several Secondaries
     :return: boolean value, to confirm successfull post request to both of Secondaries
     """
+
     try:
         response = requests.post(url=f"http://127.0.0.1:{port}/add-message-secondary/", data=json.dumps(payload))
         lg.info(f"Response status code from the Sec{port} is: {response.status_code} at {datetime.now()}")
@@ -90,6 +91,7 @@ def make_request(payload, port) -> bool:
             return False
     except Exception as err:
         lg.error(err)
+
         return False
 
 

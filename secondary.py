@@ -35,6 +35,7 @@ def add_messages(message: Message, response: Response):
     :param response: POST response
     :return: returns the text about results of request
     """
+
     messages[message.number] = message.value
 
     # delay emulation
