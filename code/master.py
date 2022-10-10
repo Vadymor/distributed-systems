@@ -27,7 +27,7 @@ def get_messages():
     This Function stands for returning of all messages in GET request
     :return: returns the list with all messages
     """
-    return messages
+    return {"messages": messages}
 
 
 @app.post("/add-message/")
@@ -39,18 +39,23 @@ def add_messages(message: Message, response: Response):
     :return: returns the text about results of request
     """
     global counter
-    messages.append(message.value)
 
-    replication_status = replicate_on_secondaries(message.value, counter)
+    message_number = counter
 
     counter += 1
+
+    messages.append(message.value)
+
+    replication_status = replicate_on_secondaries(message.value, message_number)
 
     if replication_status:
         response.status_code = status.HTTP_200_OK
         lg.info("Replication was successful")
+        return {"response_message": "Replication was successful"}
     else:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         lg.warning("Replication wasn't successful")
+        return {"response_message": "Replication wasn't successful"}
 
 
 def replicate_on_secondaries(replicated_message: str, message_number: int) -> bool:
@@ -74,7 +79,7 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         return False
 
 
-def make_request(payload, secondary_number, port) -> bool:
+def make_request(payload: dict[str, str], secondary_number: int, port: int) -> bool:
     """
     This Function stands for the post request of the message from the Master to the Secondaries
     :param payload: message that consists of value (message content) and number (message ID)
@@ -84,15 +89,19 @@ def make_request(payload, secondary_number, port) -> bool:
     """
 
     try:
-        response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/", data=json.dumps(payload))
-        lg.info(f"Response status code from the Sec{port} is: {response.status_code} at {datetime.now()}")
+        lg.info(f"Send request to the Sec{secondary_number} at {datetime.now()}")
+
+        response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
+                                 data=json.dumps(payload))
+
+        lg.info(f"Response status code from the Sec{secondary_number} is: {response.status_code} at {datetime.now()}")
+
         if response.status_code == 200:
             return True
         else:
             return False
     except Exception as err:
         lg.error(err)
-
         return False
 
 
