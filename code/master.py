@@ -92,7 +92,8 @@ def make_request(payload: dict[str, str], secondary_number: int, port: int) -> b
         lg.info(f"Send request to the Sec{secondary_number} at {datetime.now()}")
 
         response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
-                                 data=json.dumps(payload))
+                                 data=json.dumps(payload),
+                                 timeout=300)
 
         lg.info(f"Response status code from the Sec{secondary_number} is: {response.status_code} at {datetime.now()}")
 

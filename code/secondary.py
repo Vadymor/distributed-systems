@@ -24,7 +24,7 @@ def get_messages():
     """
     sorted_messages = sorted(messages.items())
 
-    return [i[1] for i in sorted_messages]
+    return {"messages": [i[1] for i in sorted_messages]}
 
 
 @app.post("/add-message-secondary/")
