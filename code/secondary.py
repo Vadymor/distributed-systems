@@ -18,13 +18,24 @@ class Message(BaseModel):
 
 @app.get("/get-messages-secondary/")
 def get_messages():
+    """
+    This Function stands for returning of all messages in GET request
+    :return: returns the list with all messages, already sorted
+    """
     sorted_messages = sorted(messages.items())
 
-    return [i[1] for i in sorted_messages]
+    return {"messages": [i[1] for i in sorted_messages]}
 
 
 @app.post("/add-message-secondary/")
 def add_messages(message: Message, response: Response):
+    """
+    This Function stands for adding of new messages to the Secondaries from the Master
+    :param message: message from the Master
+    :param response: POST response
+    :return: returns the text about results of request
+    """
+
     messages[message.number] = message.value
 
     # delay emulation
@@ -36,6 +47,4 @@ def add_messages(message: Message, response: Response):
 
 if __name__ == '__main__':
     lg.info("The Secondary`s launch is starting")
-    uvicorn.run(app, host="127.0.0.1", port=8002)
-    # uvicorn secondary:app --host 127.0.0.1 --port 8001
-
+    uvicorn.run(app, host="0.0.0.0", port=8001)

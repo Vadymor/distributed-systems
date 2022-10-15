@@ -1,4 +1,4 @@
-# distributed-systems
+# Distributed systems
 
 Replicated log app created with Python, FastAPI and Docker.
 
@@ -10,7 +10,8 @@ Replicated log app created with Python, FastAPI and Docker.
 
 ## Project structure
 ```
-├── code                     # Source code.
+
+├── code                     # Sorce code.
 │   ├── master.py            # Implements Master node functionality.
 │   └── secondary.py         # Implements Secondary node functionality.
 ├── Dockerfile               # Base Dockerfile for docker-compose 
