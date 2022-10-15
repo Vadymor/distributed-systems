@@ -10,6 +10,7 @@ Replicated log app created with Python, FastAPI and Docker.
 
 ## Project structure
 ```
+
 ├── code                     # Sorce code.
 │   ├── master.py            # Implements Master node functionality.
 │   └── secondary.py         # Implements Secondary node functionality.
@@ -23,9 +24,9 @@ Replicated log app created with Python, FastAPI and Docker.
 ## Project description
 
 This application consists of one master node and two secondary nodes. 
-Master node replicates received messages on secondary nodes. 
-HTTP is used for communication between services. 
-They run in separate docker containers. 
+Master node replicates received messages on secondary nodes.
+They are running and have been executed in separate docker containers. 
+HTTP is used for communication between these services.  
 Dockerfile is the base for all services and is used in docker-compose.yaml.
 
 The master node has two methods:
