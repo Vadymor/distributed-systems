@@ -2,6 +2,11 @@
 
 Replicated log app created with Python, FastAPI and Docker.
 
+## Contributors
+
+- Vadym Popyk
+- Oleksii Zarembovskyi
+
 ## Table of contents
 * [Project structure](#project-structure)
 * [Project description](#project-description)
