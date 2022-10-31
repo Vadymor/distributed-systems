@@ -2,18 +2,34 @@ import uvicorn
 import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
+from collections import OrderedDict
 from time import sleep
 
 lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
-messages = {}
+messages = OrderedDict()
 
 
 class Message(BaseModel):
     value: str
     number: int
+
+
+def filter_consecutive_messages():
+    consecutive_messages = []
+    index = 0
+
+    for key, value in messages.items():
+        if key - index == 1:
+            consecutive_messages.append(value)
+            index += 1
+        else:
+            lg.info("Inconsistent order")
+            break
+
+    return consecutive_messages
 
 
 @app.get("/get-messages-secondary/")
@@ -22,9 +38,8 @@ def get_messages():
     This Function stands for returning of all messages in GET request
     :return: returns the list with all messages, already sorted
     """
-    sorted_messages = sorted(messages.items())
-
-    return {"messages": [i[1] for i in sorted_messages]}
+    consecutive_messages = filter_consecutive_messages()
+    return {"messages": consecutive_messages}
 
 
 @app.post("/add-message-secondary/")
@@ -35,8 +50,11 @@ def add_messages(message: Message, response: Response):
     :param response: POST response
     :return: returns the text about results of request
     """
+    global messages
 
     messages[message.number] = message.value
+
+    messages = OrderedDict(sorted(messages.items()))
 
     # delay emulation
     sleep(1)
