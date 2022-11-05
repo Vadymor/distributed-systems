@@ -1,3 +1,4 @@
+# Lab 1 Extensions
 import json
 import requests
 from datetime import datetime
@@ -5,6 +6,61 @@ import uvicorn
 import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
+
+# Lab 2 extensions
+from time import sleep
+from random import random
+from threading import Thread, Condition
+
+# simple countdown latch, starts closed then opens once count is reached
+class CountDownLatch():
+    # constructor
+    def __init__(self, count):
+        # store the count
+        self.count = count
+        # control access to the count and notify when latch is open
+        self.condition = Condition()
+ 
+    # count down the latch by one increment
+    def count_down(self):
+        # acquire the lock on the condition
+        with self.condition:
+            # check if the latch is already open
+            if self.count == 0:
+                return
+            # decrement the counter
+            self.count -= 1
+            # check if the latch is now open
+            if self.count == 0:
+                # notify all waiting threads that the latch is open
+                self.condition.notify_all()
+ 
+    # wait for the latch to open
+    def wait(self):
+        # acquire the lock on the condition
+        with self.condition:
+            # check if the latch is already open
+            if self.count == 0:
+                return
+            # wait to be notified when the latch is open
+            self.condition.wait()
+
+## To return value from "make_request" func
+
+class ThreadWithReturnValue(Thread):
+    
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args,
+                                                **self._kwargs)
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
 
 lg.basicConfig(level=lg.INFO)
 
@@ -57,7 +113,6 @@ def add_messages(message: Message, response: Response):
         lg.warning("Replication wasn't successful")
         return {"response_message": "Replication wasn't successful"}
 
-
 def replicate_on_secondaries(replicated_message: str, message_number: int) -> bool:
     """
     This Function stands for replicating of the message on the secondaries
@@ -70,10 +125,32 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         "number": message_number
     }
 
-    response1 = make_request(payload, 1, 8001)
-    response2 = make_request(payload, 2, 8002)
+    acceptance_level = 2
+    responses = 0
 
-    if response1 and response2:
+    # create the countdown latch
+    latch = CountDownLatch(2)
+
+    for i in range(1,3):
+        thread = ThreadWithReturnValue(target=make_request
+        , args=(payload, i, int(f'800{i}')))
+
+        lg.info(f'Thread for port 800{i}, Sec{i} is starting at {datetime.now()}')
+        # to emulate block
+        sleep(random() * 10)
+
+        # count down the latch
+        latch.count_down()
+
+        thread.start()
+
+        responses += thread.join()
+        lg.info(f"Thread for port 800{i}, Sec{i} is over at {datetime.now()}")
+
+    lg.info('Waiting on latch to replicate on secondaries')
+    latch.wait()
+
+    if responses == acceptance_level:
         return True
     else:
         return False
