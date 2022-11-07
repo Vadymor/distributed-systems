@@ -12,26 +12,29 @@ from time import sleep
 from random import random
 from threading import Thread, Condition
 
+
 # simple countdown latch, starts closed then opens once count is reached
-class CountDownLatch():
+class CountDownLatch:
     # constructor
-    def __init__(self, count):
+    def __init__(self, count, acceptance_count):
         # store the count
         self.count = count
         # control access to the count and notify when latch is open
         self.condition = Condition()
+
+        self.acceptance_count = count - acceptance_count
  
     # count down the latch by one increment
     def count_down(self):
         # acquire the lock on the condition
         with self.condition:
             # check if the latch is already open
-            if self.count == 0:
+            if self.count == self.acceptance_count:
                 return
             # decrement the counter
             self.count -= 1
             # check if the latch is now open
-            if self.count == 0:
+            if self.count == self.acceptance_count:
                 # notify all waiting threads that the latch is open
                 self.condition.notify_all()
  
@@ -40,27 +43,29 @@ class CountDownLatch():
         # acquire the lock on the condition
         with self.condition:
             # check if the latch is already open
-            if self.count == 0:
+            if self.count == self.acceptance_count:
                 return
             # wait to be notified when the latch is open
             self.condition.wait()
 
-## To return value from "make_request" func
 
+# To return value from "make_request" func
 class ThreadWithReturnValue(Thread):
     
     def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}, Verbose=None):
+                 args=(), kwargs={}):
         Thread.__init__(self, group, target, name, args, kwargs)
         self._return = None
 
     def run(self):
         if self._target is not None:
             self._return = self._target(*self._args,
-                                                **self._kwargs)
+                                        **self._kwargs)
+
     def join(self, *args):
         Thread.join(self, *args)
         return self._return
+
 
 lg.basicConfig(level=lg.INFO)
 
@@ -113,6 +118,7 @@ def add_messages(message: Message, response: Response):
         lg.warning("Replication wasn't successful")
         return {"response_message": "Replication wasn't successful"}
 
+
 def replicate_on_secondaries(replicated_message: str, message_number: int) -> bool:
     """
     This Function stands for replicating of the message on the secondaries
@@ -129,23 +135,19 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
     responses = 0
 
     # create the countdown latch
-    latch = CountDownLatch(2)
+    latch = CountDownLatch(2, 1)
 
-    for i in range(1,3):
-        thread = ThreadWithReturnValue(target=make_request
-        , args=(payload, i, int(f'800{i}')))
+    threads = []
+    for i in range(1, 3):
+        thread = ThreadWithReturnValue(target=make_request, args=(latch, payload, i, int(f'800{i}')))
+        threads.append(thread)
 
         lg.info(f'Thread for port 800{i}, Sec{i} is starting at {datetime.now()}')
-        # to emulate block
-        sleep(random() * 10)
-
-        # count down the latch
-        latch.count_down()
 
         thread.start()
 
+    for index, thread in enumerate(threads):
         responses += thread.join()
-        lg.info(f"Thread for port 800{i}, Sec{i} is over at {datetime.now()}")
 
     lg.info('Waiting on latch to replicate on secondaries')
     latch.wait()
@@ -156,9 +158,10 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         return False
 
 
-def make_request(payload: dict[str, str], secondary_number: int, port: int) -> bool:
+def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_number: int, port: int) -> bool:
     """
     This Function stands for the post request of the message from the Master to the Secondaries
+    :param latch: -------
     :param payload: message that consists of value (message content) and number (message ID)
     :param secondary_number: secondary service number
     :param port: the port of secondary as param, to operate over several Secondaries
@@ -171,6 +174,8 @@ def make_request(payload: dict[str, str], secondary_number: int, port: int) -> b
         response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
                                  data=json.dumps(payload),
                                  timeout=300)
+
+        latch.count_down()
 
         lg.info(f"Response status code from the Sec{secondary_number} is: {response.status_code} at {datetime.now()}")
 
