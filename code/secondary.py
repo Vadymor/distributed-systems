@@ -57,7 +57,7 @@ def add_messages(message: Message, response: Response):
     messages = OrderedDict(sorted(messages.items()))
 
     # delay emulation
-    sleep(50)
+    sleep(2)
 
     response.status_code = status.HTTP_200_OK
     lg.info("Message was added successfully")

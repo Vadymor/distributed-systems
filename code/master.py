@@ -8,33 +8,32 @@ from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 
 # Lab 2 extensions
-from time import sleep
-from random import random
 from threading import Thread, Condition
+
+
+lg.basicConfig(level=lg.INFO)
 
 
 # simple countdown latch, starts closed then opens once count is reached
 class CountDownLatch:
-    # constructor
-    def __init__(self, count, acceptance_count):
+
+    def __init__(self, count):
         # store the count
         self.count = count
         # control access to the count and notify when latch is open
         self.condition = Condition()
 
-        self.acceptance_count = count - acceptance_count
- 
     # count down the latch by one increment
     def count_down(self):
         # acquire the lock on the condition
         with self.condition:
             # check if the latch is already open
-            if self.count == self.acceptance_count:
+            if self.count == 0:
                 return
             # decrement the counter
             self.count -= 1
             # check if the latch is now open
-            if self.count == self.acceptance_count:
+            if self.count == 0:
                 # notify all waiting threads that the latch is open
                 self.condition.notify_all()
  
@@ -43,31 +42,12 @@ class CountDownLatch:
         # acquire the lock on the condition
         with self.condition:
             # check if the latch is already open
-            if self.count == self.acceptance_count:
+            if self.count == 0:
                 return
             # wait to be notified when the latch is open
-            self.condition.wait()
+            final_status = self.condition.wait(5)
+            return final_status
 
-
-# To return value from "make_request" func
-class ThreadWithReturnValue(Thread):
-    
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}):
-        Thread.__init__(self, group, target, name, args, kwargs)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args,
-                                        **self._kwargs)
-
-    def join(self, *args):
-        Thread.join(self, *args)
-        return self._return
-
-
-lg.basicConfig(level=lg.INFO)
 
 app = FastAPI()
 
@@ -132,30 +112,25 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
     }
 
     acceptance_level = 2
-    responses = 0
 
     # create the countdown latch
-    latch = CountDownLatch(2, 1)
+    latch = CountDownLatch(acceptance_level)
 
     threads = []
     for i in range(1, 3):
-        thread = ThreadWithReturnValue(target=make_request, args=(latch, payload, i, int(f'800{i}')))
+        thread = Thread(target=make_request, args=(latch, payload, i, int(f'800{i}')))
         threads.append(thread)
 
         lg.info(f'Thread for port 800{i}, Sec{i} is starting at {datetime.now()}')
 
         thread.start()
 
-    for index, thread in enumerate(threads):
-        responses += thread.join()
+    return_status = latch.wait()
 
-    lg.info('Waiting on latch to replicate on secondaries')
-    latch.wait()
+    print(return_status)
+    lg.info('Pass latch wait')
 
-    if responses == acceptance_level:
-        return True
-    else:
-        return False
+    return return_status
 
 
 def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_number: int, port: int) -> bool:
@@ -173,13 +148,12 @@ def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_numbe
 
         response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
                                  data=json.dumps(payload),
-                                 timeout=300)
-
-        latch.count_down()
+                                 timeout=4)
 
         lg.info(f"Response status code from the Sec{secondary_number} is: {response.status_code} at {datetime.now()}")
 
         if response.status_code == 200:
+            latch.count_down()
             return True
         else:
             return False
