@@ -7,7 +7,7 @@ services:
       - .:/code
     ports:
       - "8000:8000"
-    command: ["uvicorn", "code.master:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "code.master:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
 
   secondary1:
     build: .
@@ -15,7 +15,7 @@ services:
       - .:/code
     ports:
       - "8001:8001"
-    command: [ "uvicorn", "code.secondary:app", "--host", "0.0.0.0", "--port", "8001"]
+    command: [ "uvicorn", "code.secondary:app", "--reload", "--host", "0.0.0.0", "--port", "8001"]
 
   secondary2:
     build: .
@@ -23,4 +23,4 @@ services:
       - .:/code
     ports:
       - "8002:8002"
-    command: [ "uvicorn", "code.secondary:app", "--host", "0.0.0.0", "--port", "8002" ]
+    command: [ "uvicorn", "code.secondary:app", "--reload", "--host", "0.0.0.0", "--port", "8002" ]

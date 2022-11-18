@@ -1,3 +1,4 @@
+# Lab 1 Extensions
 import json
 import requests
 from datetime import datetime
@@ -6,7 +7,47 @@ import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 
+# Lab 2 extensions
+from threading import Thread, Condition
+
+
 lg.basicConfig(level=lg.INFO)
+
+
+# simple countdown latch, starts closed then opens once count is reached
+class CountDownLatch:
+
+    def __init__(self, count):
+        # store the count
+        self.count = count
+        # control access to the count and notify when latch is open
+        self.condition = Condition()
+
+    # count down the latch by one increment
+    def count_down(self):
+        # acquire the lock on the condition
+        with self.condition:
+            # check if the latch is already open
+            if self.count == 0:
+                return
+            # decrement the counter
+            self.count -= 1
+            # check if the latch is now open
+            if self.count == 0:
+                # notify all waiting threads that the latch is open
+                self.condition.notify_all()
+ 
+    # wait for the latch to open
+    def wait(self):
+        # acquire the lock on the condition
+        with self.condition:
+            # check if the latch is already open
+            if self.count == 0:
+                return
+            # wait to be notified when the latch is open
+            final_status = self.condition.wait(5)
+            return final_status
+
 
 app = FastAPI()
 
@@ -70,18 +111,32 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
         "number": message_number
     }
 
-    response1 = make_request(payload, 1, 8001)
-    response2 = make_request(payload, 2, 8002)
+    acceptance_level = 2
 
-    if response1 and response2:
-        return True
-    else:
-        return False
+    # create the countdown latch
+    latch = CountDownLatch(acceptance_level)
+
+    threads = []
+    for i in range(1, 3):
+        thread = Thread(target=make_request, args=(latch, payload, i, int(f'800{i}')))
+        threads.append(thread)
+
+        lg.info(f'Thread for port 800{i}, Sec{i} is starting at {datetime.now()}')
+
+        thread.start()
+
+    return_status = latch.wait()
+
+    print(return_status)
+    lg.info('Pass latch wait')
+
+    return return_status
 
 
-def make_request(payload: dict[str, str], secondary_number: int, port: int) -> bool:
+def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_number: int, port: int) -> bool:
     """
     This Function stands for the post request of the message from the Master to the Secondaries
+    :param latch: -------
     :param payload: message that consists of value (message content) and number (message ID)
     :param secondary_number: secondary service number
     :param port: the port of secondary as param, to operate over several Secondaries
@@ -93,11 +148,12 @@ def make_request(payload: dict[str, str], secondary_number: int, port: int) -> b
 
         response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
                                  data=json.dumps(payload),
-                                 timeout=300)
+                                 timeout=4)
 
         lg.info(f"Response status code from the Sec{secondary_number} is: {response.status_code} at {datetime.now()}")
 
         if response.status_code == 200:
+            latch.count_down()
             return True
         else:
             return False
