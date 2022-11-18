@@ -4,6 +4,7 @@ from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 from collections import OrderedDict
 from time import sleep
+from random import randrange
 
 lg.basicConfig(level=lg.INFO)
 
@@ -52,15 +53,21 @@ def add_messages(message: Message, response: Response):
     """
     global messages
 
-    messages[message.number] = message.value
-
-    messages = OrderedDict(sorted(messages.items()))
-
     # delay emulation
-    sleep(2)
+    sleep(randrange(4))
 
-    response.status_code = status.HTTP_200_OK
-    lg.info("Message was added successfully")
+    if randrange(2) == 1:
+
+        messages[message.number] = message.value
+
+        messages = OrderedDict(sorted(messages.items()))
+
+        response.status_code = status.HTTP_200_OK
+        lg.info("Message was added successfully")
+
+    else:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        lg.info("Message wasn't added successfully")
 
 
 if __name__ == '__main__':
