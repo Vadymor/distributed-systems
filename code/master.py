@@ -6,9 +6,11 @@ import uvicorn
 import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
+from enum import Enum
+
 
 # Lab 2 extensions
-from threading import Thread, Condition
+from threading import Thread, Condition, Lock
 
 
 lg.basicConfig(level=lg.INFO)
@@ -56,10 +58,18 @@ messages = []
 
 # global message counter
 counter = 1
+counter_lock = Lock()
+
+
+class WriteConcern(int, Enum):
+    one = 1
+    two = 2
+    three = 3
 
 
 class Message(BaseModel):
     value: str
+    write_concern: WriteConcern
 
 
 @app.get("/get-messages")
@@ -72,7 +82,7 @@ def get_messages():
 
 
 @app.post("/add-message/")
-def add_messages(message: Message, response: Response):
+async def add_messages(message: Message, response: Response):
     """
     This Function stands for adding of new messages in the list and replicating it in the secondaries
     :param message: received message
@@ -81,13 +91,13 @@ def add_messages(message: Message, response: Response):
     """
     global counter
 
-    message_number = counter
-
-    counter += 1
+    with counter_lock:
+        message_number = counter
+        counter += 1
 
     messages.append(message.value)
 
-    replication_status = replicate_on_secondaries(message.value, message_number)
+    replication_status = replicate_on_secondaries(message.value, message_number, message.write_concern - 1)
 
     if replication_status:
         response.status_code = status.HTTP_200_OK
@@ -99,19 +109,18 @@ def add_messages(message: Message, response: Response):
         return {"response_message": "Replication wasn't successful"}
 
 
-def replicate_on_secondaries(replicated_message: str, message_number: int) -> bool:
+def replicate_on_secondaries(replicated_message: str, message_number: int, acceptance_level: int) -> bool:
     """
     This Function stands for replicating of the message on the secondaries
     :param replicated_message: message for replication
     :param message_number: message number
+    :param acceptance_level: number of necessary successful replications
     :return: replication status
     """
     payload = {
         "value": replicated_message,
         "number": message_number
     }
-
-    acceptance_level = 2
 
     # create the countdown latch
     latch = CountDownLatch(acceptance_level)
@@ -127,10 +136,9 @@ def replicate_on_secondaries(replicated_message: str, message_number: int) -> bo
 
     return_status = latch.wait()
 
-    print(return_status)
     lg.info('Pass latch wait')
 
-    return return_status
+    return return_status if acceptance_level != 0 else True
 
 
 def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_number: int, port: int) -> bool:
@@ -140,7 +148,7 @@ def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_numbe
     :param payload: message that consists of value (message content) and number (message ID)
     :param secondary_number: secondary service number
     :param port: the port of secondary as param, to operate over several Secondaries
-    :return: boolean value, to confirm successfull post request to both of Secondaries
+    :return: boolean value, to confirm successful post request to both of Secondaries
     """
 
     try:
