@@ -10,7 +10,7 @@ from enum import Enum
 
 
 # Lab 2 extensions
-from threading import Thread, Condition
+from threading import Thread, Condition, Lock
 
 
 lg.basicConfig(level=lg.INFO)
@@ -58,6 +58,7 @@ messages = []
 
 # global message counter
 counter = 1
+counter_lock = Lock()
 
 
 class WriteConcern(int, Enum):
@@ -81,7 +82,7 @@ def get_messages():
 
 
 @app.post("/add-message/")
-def add_messages(message: Message, response: Response):
+async def add_messages(message: Message, response: Response):
     """
     This Function stands for adding of new messages in the list and replicating it in the secondaries
     :param message: received message
@@ -90,9 +91,9 @@ def add_messages(message: Message, response: Response):
     """
     global counter
 
-    message_number = counter
-
-    counter += 1
+    with counter_lock:
+        message_number = counter
+        counter += 1
 
     messages.append(message.value)
 
@@ -135,7 +136,6 @@ def replicate_on_secondaries(replicated_message: str, message_number: int, accep
 
     return_status = latch.wait()
 
-    print(return_status)
     lg.info('Pass latch wait')
 
     return return_status if acceptance_level != 0 else True

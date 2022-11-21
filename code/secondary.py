@@ -56,18 +56,12 @@ def add_messages(message: Message, response: Response):
     # delay emulation
     sleep(randrange(4))
 
-    if randrange(2) == 1:
+    messages[message.number] = message.value
 
-        messages[message.number] = message.value
+    messages = OrderedDict(sorted(messages.items()))
 
-        messages = OrderedDict(sorted(messages.items()))
-
-        response.status_code = status.HTTP_200_OK
-        lg.info("Message was added successfully")
-
-    else:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        lg.info("Message wasn't added successfully")
+    response.status_code = status.HTTP_200_OK
+    lg.info("Message was added successfully")
 
 
 if __name__ == '__main__':
