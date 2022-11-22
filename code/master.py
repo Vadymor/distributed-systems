@@ -97,7 +97,7 @@ async def add_messages(message: Message, response: Response):
 
     messages.append(message.value)
 
-    replication_status = replicate_on_secondaries(message.value, message_number, message.write_concern - 1)
+    replication_status = await replicate_on_secondaries(message.value, message_number, message.write_concern - 1)
 
     if replication_status:
         response.status_code = status.HTTP_200_OK
@@ -109,7 +109,7 @@ async def add_messages(message: Message, response: Response):
         return {"response_message": "Replication wasn't successful"}
 
 
-def replicate_on_secondaries(replicated_message: str, message_number: int, acceptance_level: int) -> bool:
+async def replicate_on_secondaries(replicated_message: str, message_number: int, acceptance_level: int) -> bool:
     """
     This Function stands for replicating of the message on the secondaries
     :param replicated_message: message for replication
