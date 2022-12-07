@@ -7,6 +7,8 @@ import logging as lg
 from fastapi import FastAPI, Response, status
 from pydantic import BaseModel
 from enum import Enum
+from functools import wraps, partial
+import asyncio
 
 
 # Lab 2 extensions
@@ -109,7 +111,18 @@ async def add_messages(message: Message, response: Response):
         return {"response_message": "Replication wasn't successful"}
 
 
-async def replicate_on_secondaries(replicated_message: str, message_number: int, acceptance_level: int) -> bool:
+def wrap(func):
+    @wraps(func)
+    async def run(*args, loop=None, executor=None, **kwargs):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        pfunc = partial(func, *args, **kwargs)
+        return await loop.run_in_executor(executor, pfunc)
+    return run
+
+
+@wrap
+def replicate_on_secondaries(replicated_message: str, message_number: int, acceptance_level: int) -> bool:
     """
     This Function stands for replicating of the message on the secondaries
     :param replicated_message: message for replication
