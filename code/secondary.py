@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from collections import OrderedDict
 from time import sleep
 from random import randrange
+import requests
 
 lg.basicConfig(level=lg.INFO)
 
@@ -62,6 +63,26 @@ def add_messages(message: Message, response: Response):
 
     response.status_code = status.HTTP_200_OK
     lg.info("Message was added successfully")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    This Function stands for adding of all messages to the Secondary from the Master.
+    This Function runs once at node startup
+    """
+    global messages
+
+    master_port = 8000
+    response = requests.get(url=f"http://master:{master_port}/get-messages/",
+                            timeout=60)
+
+    master_messages = response.json()['messages']
+
+    for index, msg in enumerate(master_messages):
+        messages[index + 1] = msg
+
+    messages = OrderedDict(sorted(messages.items()))
 
 
 if __name__ == '__main__':
