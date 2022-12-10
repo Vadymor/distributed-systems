@@ -13,7 +13,7 @@ import asyncio
 
 # Lab 2 extensions
 from threading import Thread, Condition, Lock
-
+from requests.adapters import HTTPAdapter, Retry
 
 lg.basicConfig(level=lg.INFO)
 
@@ -49,7 +49,7 @@ class CountDownLatch:
             if self.count == 0:
                 return
             # wait to be notified when the latch is open
-            final_status = self.condition.wait(5)
+            final_status = self.condition.wait(50)
             return final_status
 
 
@@ -167,7 +167,11 @@ def make_request(latch: CountDownLatch, payload: dict[str, str], secondary_numbe
     try:
         lg.info(f"Send request to the Sec{secondary_number} at {datetime.now()}")
 
-        response = requests.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
+        s = requests.Session()
+        retries = Retry(total=5, backoff_factor=1, status_forcelist=[ 404, 500, 502, 503, 504 ])
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+
+        response = s.post(url=f"http://secondary{secondary_number}:{port}/add-message-secondary/",
                                  data=json.dumps(payload),
                                  timeout=4)
 
